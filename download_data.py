@@ -55,7 +55,7 @@ def get_financials_morningstar(exchange, ticker, temp_dir, dist_dir):
         pass
     time.sleep(0.01)
     shutil.move(os.path.join(temp_dir,fname), os.path.join(dist_dir,fname_out))
-
+    return True
     
 
 def get_fyahoo_historical(exchange, ticker, dist_dir):
@@ -66,15 +66,35 @@ def get_fyahoo_historical(exchange, ticker, dist_dir):
         combined_ticker = ticker
 
     fname_out = ticker + "_hist.csv"
-    try:
+    x = yf.Ticker(combined_ticker)
+    
+    if len(x.info) > 0 :
         data = yf.download(combined_ticker, interval="1d",period="max", auto_adjust=True, actions=True, threads=8)
         data.to_csv(os.path.join(dist_dir, fname_out))
-    except:
-        logging.error("cant dontload the data")
+        return True
+    else:
+        logging.error("cant donwnload the data")
+        raise Exception('ticker ' + combined_ticker + ' not avalible in yahoo finance')
 
 def read_ticker_list(ticker_list):
-    lines = [line.strip() for line in open(ticker_list)]
-    return lines
+    lines = [line.strip().split()[0] for line in open(ticker_list)]
+    final_tickers = {}
+    for line in lines:
+        parts = line.split(".")
+        if len(parts) == 1:
+            final_tickers[line] = True
+    for line in lines:
+        parts = line.split(".")
+        x = parts[0]
+        c = 0
+        if x not in final_tickers:
+            while x not in final_tickers and c <= len(parts):
+                x = ".".join(parts[0:c])
+                c += 1
+            final_tickers[x] = True
+    #print(final_tickers)
+    #exit(1)
+    return list(final_tickers.keys())
 
 def read_config(config_file):
     """
@@ -118,6 +138,7 @@ parser.add_argument('--ticker_list', type=str, help='list of tickers')
 parser.add_argument('--exchange', type=str, help='name of exchange')
 parser.add_argument('--morningstar', action='store_true', help='download morningstar')
 parser.add_argument('--fyahoo_hist', action='store_true', help='download yahoo historical')
+#parser.add_argument('--report', type=str, help='report of downloads')
 paras = parser.parse_args()
 
 log_level = paras.log_level
@@ -152,15 +173,23 @@ enable_download_in_headless_chrome(driver, temp_dir)
 # do something for errors : (not found what ever)
 # download options to download only needed source (from cmd)
 
+success_morningstar = []
+failed_morningstar = []
+sucess_fyahoo = []
+failed_fyahoo = []
 for ticker in tickers:
     logging.info("downloading " + ticker)
     if paras.morningstar:
         try:
             get_financials_morningstar(map_exchange_morningstar(paras.exchange), ticker, temp_dir, dist_dir)
+            success_morningstar.append(ticker)
         except:
+            failed_morningstar.append(ticker)
             logging.error(ticker + " data from morningstar has not been downloaded")
     if paras.fyahoo_hist: 
         try:
             get_fyahoo_historical(map_exchange_fyahoo(paras.exchange), ticker, dist_dir)
+            success_fyahoo.append(ticker)
         except:
             logging.error(ticker + " data from yahoo finance has not been downloaded")
+            failed_fyahoo.append(ticker)
