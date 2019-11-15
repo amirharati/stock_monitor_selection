@@ -32,7 +32,7 @@ import argparse
 import yaml
 import  logging
 
-#chrome_options = Options()  
+ 
 def enable_download_in_headless_chrome(driver, download_dir):
     # add missing support for chrome "send_command"  to selenium webdriver
     driver.command_executor._commands["send_command"] = ("POST", '/session/$sessionId/chromium/send_command')
@@ -59,13 +59,14 @@ def get_financials_morningstar(exchange, ticker, temp_dir, dist_dir):
     
 
 def get_fyahoo_historical(exchange, ticker, dist_dir):
+    fname_out = ticker + "_hist.csv"
     ticker = ticker.replace(".", "-")
     if exchange != "":
         combined_ticker = ticker + "." + exchange
     else:
         combined_ticker = ticker
 
-    fname_out = ticker + "_hist.csv"
+    
     x = yf.Ticker(combined_ticker)
     
     if len(x.info) > 0 :
@@ -175,7 +176,7 @@ enable_download_in_headless_chrome(driver, temp_dir)
 
 success_morningstar = []
 failed_morningstar = []
-sucess_fyahoo = []
+success_fyahoo = []
 failed_fyahoo = []
 for ticker in tickers:
     logging.info("downloading " + ticker)
